@@ -1,98 +1,147 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList } from "react-native";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const CATEGORIES = [
+  { id: '1', title: 'Bảo mật', icon: '🔒', bgColor: '#E0E7FF' },
+  { id: '2', title: 'Nhanh', icon: '⚡', bgColor: '#FEF3C7' },
+  { id: '3', title: 'Hỗ trợ', icon: '💬', bgColor: '#DCFCE7' },
+  { id: '4', title: 'Tính năng', icon: '⭐', bgColor: '#FEE2E2' },
+];
+
+const HIGHLIGHTS = [
+  { id: '1', title: 'Tính năng nổi bật 1', image: 'https://images.unsplash.com/photo-1557682224-5b8590cd9ec5?auto=format&fit=crop&w=800&q=80' },
+  { id: '2', title: 'Tính năng nổi bật 2', image: 'https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=800&q=80' },
+  { id: '3', title: 'Tính năng nổi bật 3', image: 'https://images.unsplash.com/photo-1557683450-7e4d3f11e05b?auto=format&fit=crop&w=800&q=80' },
+];
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const [menuVisible, setMenuVisible] = useState(false);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const handleUserPress = () => setMenuVisible(!menuVisible);
+
+  return (
+    <View style={styles.container}>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleUserPress}>
+          <Ionicons name="person-circle-outline" size={36} color="#1f2937" />
+        </TouchableOpacity>
+      </View>
+
+      {/* USER MENU */}
+      {menuVisible && (
+        <View style={styles.userMenu}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuVisible(false); router.push("/login"); }}>
+            <Text style={styles.menuText}>Đăng nhập</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuVisible(false); router.push("/register"); }}>
+            <Text style={styles.menuText}>Đăng ký</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* HERO */}
+        <View style={styles.hero}>
+          <Image
+            source={{ uri: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80' }}
+            style={styles.heroImage}
+          />
+          <View style={styles.heroOverlay}>
+            <Text style={styles.heroTitle}>Trải nghiệm tuyệt vời</Text>
+            <Text style={styles.heroSubtitle}>Nhanh, an toàn và tiện lợi</Text>
+            <TouchableOpacity style={styles.ctaButton} onPress={() => router.push("/register")}>
+              <Text style={styles.ctaText}>Bắt đầu ngay</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* CATEGORY SECTION */}
+        <Text style={styles.sectionTitle}>Danh mục</Text>
+        <View style={styles.categories}>
+          {CATEGORIES.map(cat => (
+            <View key={cat.id} style={[styles.categoryCard, { backgroundColor: cat.bgColor }]}>
+              <Text style={styles.categoryIcon}>{cat.icon}</Text>
+              <Text style={styles.categoryTitle}>{cat.title}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* HIGHLIGHTS SECTION */}
+        <Text style={styles.sectionTitle}>Điểm nổi bật</Text>
+        <FlatList
+          horizontal
+          data={HIGHLIGHTS}
+          keyExtractor={item => item.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 10 }}
+          renderItem={({ item }) => (
+            <View style={styles.highlightCard}>
+              <Image source={{ uri: item.image }} style={styles.highlightImage} />
+              <Text style={styles.highlightTitle}>{item.title}</Text>
+            </View>
+          )}
+        />
+
+        {/* BOTTOM CTA */}
+        <TouchableOpacity style={styles.bottomButton} onPress={() => router.push("/register")}>
+          <Text style={styles.bottomButtonText}>Tham gia ngay</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: { flex: 1, backgroundColor: '#f7f8fa' },
+  header: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: 8,
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 10,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    zIndex: 10,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  userMenu: {
     position: 'absolute',
+    top: 90,
+    right: 20,
+    width: 140,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    zIndex: 20,
   },
+  menuItem: { paddingVertical: 12, paddingHorizontal: 16 },
+  menuText: { fontSize: 16, color: '#1f2937' },
+  content: { paddingBottom: 40 },
+  hero: { position: 'relative', width: '100%', height: 300, marginBottom: 30 },
+  heroImage: { width: '100%', height: '100%', borderRadius: 20 },
+  heroOverlay: { position: 'absolute', bottom: 20, left: 20 },
+  heroTitle: { color: '#fff', fontSize: 26, fontWeight: 'bold', marginBottom: 6 },
+  heroSubtitle: { color: '#fff', fontSize: 16, marginBottom: 10 },
+  ctaButton: { backgroundColor: '#4f46e5', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12 },
+  ctaText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1f2937', marginLeft: 20, marginBottom: 12 },
+  categories: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 30, flexWrap: 'wrap' },
+  categoryCard: { width: '45%', padding: 16, borderRadius: 16, alignItems: 'center', marginBottom: 12 },
+  categoryIcon: { fontSize: 28, marginBottom: 8 },
+  categoryTitle: { fontWeight: '700', fontSize: 16, textAlign: 'center' },
+  highlightCard: { marginRight: 12, width: 200, borderRadius: 16, overflow: 'hidden' },
+  highlightImage: { width: '100%', height: 120 },
+  highlightTitle: { padding: 8, fontWeight: '600', fontSize: 14, color: '#1f2937' },
+  bottomButton: { backgroundColor: '#4f46e5', marginHorizontal: 20, paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 30 },
+  bottomButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
