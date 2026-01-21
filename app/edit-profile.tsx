@@ -1,159 +1,283 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
-import { Feather, MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  StatusBar,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_CONFIG } from "../apiConfig";
 
-export default function EditProfileClear() {
+export default function EditProfile() {
   const router = useRouter();
-  const [name, setName] = useState('Alex Meiapp');
-  const [phone, setPhone] = useState('0901 234 567');
+
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [activeField, setActiveField] = useState(null);
+
+  const [originalUser, setOriginalUser] = useState(null);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const data = await AsyncStorage.getItem("userData");
+      if (data) {
+        const user = JSON.parse(data);
+        setOriginalUser(user);
+        
+        // Đảm bảo cập nhật state ngay khi có dữ liệu
+        setFullName(user.fullName || "");
+        setEmail(user.email || "");
+        setPhone(user.phone || "");
+      }
+    } catch (e) {
+      console.log("Lỗi tải dữ liệu:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validateEmail = (value) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+  const handleSave = async () => {
+    if (!fullName.trim() || !email.trim()) {
+      return Alert.alert("Thông báo", "Vui lòng nhập đủ thông tin.");
+    }
+
+    if (!validateEmail(email)) {
+      return Alert.alert("Thông báo", "Email không hợp lệ.");
+    }
+
+    if (!originalUser?.id) return;
+
+    setUpdating(true);
+    try {
+      const formData = new FormData();
+      formData.append("FullName", fullName.trim());
+      formData.append("Email", email.trim());
+      formData.append("Phone", phone.trim());
+
+      const res = await fetch(
+        `${API_CONFIG.BASE_URL}/api/User/${originalUser.id}`,
+        {
+          method: "PUT",
+          body: formData,
+        }
+      );
+
+      if (!res.ok) throw new Error("Update failed");
+
+      const result = await res.json();
+      // Cập nhật lại bộ nhớ cục bộ sau khi lưu thành công
+      await AsyncStorage.setItem("userData", JSON.stringify(result));
+
+      Alert.alert("Thành công ✨", "Hồ sơ đã được cập nhật.");
+      router.back();
+    } catch {
+      Alert.alert("Lỗi", "Không thể cập nhật hồ sơ.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#1D1D1F" />
+      </View>
+    );
+  }
+
+  const avatarUri = originalUser?.avatar
+    ? `${API_CONFIG.BASE_URL}/uploads/user/${originalUser.avatar}`
+    : `https://ui-avatars.com/api/?name=${fullName}&background=F2F2F7&color=1D1D1F&size=200`;
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
-      {/* Header: To, rõ, dễ bấm */}
+
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={24} color="#000" />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Feather name="chevron-left" size={28} color="#1D1D1F" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chỉnh sửa thông tin</Text>
-        <View style={{ width: 40 }} />
+
+        <Text style={styles.headerTitle}>Hồ sơ cá nhân</Text>
+
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={updating}
+          style={styles.saveBtn}
+        >
+          {updating ? (
+            <ActivityIndicator color="#FFF" size="small" />
+          ) : (
+            <Text style={styles.saveText}>Lưu</Text>
+          )}
+        </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
-        {/* Khu vực ảnh đại diện */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarContainer}>
-            <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1000' }} 
-              style={styles.avatar} 
-            />
-            <TouchableOpacity style={styles.changePhotoBtn}>
-              <Feather name="camera" size={18} color="#FFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Các ô nhập liệu: Tách biệt rõ ràng */}
-        <View style={styles.form}>
-          
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Họ và tên</Text>
-            <View style={styles.inputContainer}>
-              <Feather name="user" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput 
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Nhập tên của bạn"
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Số điện thoại</Text>
-            <View style={styles.inputContainer}>
-              <Feather name="phone" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput 
-                style={styles.input}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Email (Không thể thay đổi)</Text>
-            <View style={[styles.inputContainer, styles.disabledInput]}>
-              <Feather name="mail" size={20} color="#999" style={styles.inputIcon} />
-              <TextInput 
-                style={[styles.input, { color: '#999' }]}
-                value="alex.meiapp@gmail.com"
-                editable={false}
-              />
-            </View>
-          </View>
-
-        </View>
-
-        {/* Nút lưu to, rõ ràng, màu đen cực nổi trên nền trắng */}
-        <TouchableOpacity 
-          style={styles.saveButton} 
-          onPress={() => router.back()}
-          activeOpacity={0.8}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
-        </TouchableOpacity>
+          {/* Avatar Section */}
+          <View style={styles.avatarSection}>
+            <TouchableOpacity activeOpacity={0.8}>
+              <Image source={{ uri: avatarUri }} style={styles.avatar} />
+              <View style={styles.camera}>
+                <Feather name="camera" size={16} color="#1D1D1F" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.sub}>Nhấn để thay đổi ảnh</Text>
+          </View>
 
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Form Fields - Dữ liệu sẽ tự động điền vào đây nhờ state fullName, email, phone */}
+          <InputItem
+            label="Họ và tên"
+            value={fullName}
+            onChangeText={setFullName}
+            placeholder="Nhập họ và tên"
+            isActive={activeField === "name"}
+            onFocus={() => setActiveField("name")}
+            onBlur={() => setActiveField(null)}
+          />
+
+          <InputItem
+            label="Email"
+            value={email}
+            keyboardType="email-address"
+            onChangeText={setEmail}
+            placeholder="example@gmail.com"
+            isActive={activeField === "email"}
+            onFocus={() => setActiveField("email")}
+            onBlur={() => setActiveField(null)}
+            autoCapitalize="none"
+          />
+
+          <InputItem
+            label="Số điện thoại"
+            value={phone}
+            keyboardType="phone-pad"
+            onChangeText={setPhone}
+            placeholder="Chưa cập nhật số điện thoại"
+            isActive={activeField === "phone"}
+            onFocus={() => setActiveField("phone")}
+            onBlur={() => setActiveField(null)}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F5F8' }, // Nút nền hơi xanh nhạt cho dịu mắt
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-    backgroundColor: '#FFF',
-  },
-  backBtn: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 20 },
-  
-  avatarSection: { alignItems: 'center', marginBottom: 30 },
-  avatarContainer: { position: 'relative' },
-  avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: '#FFF' },
-  changePhotoBtn: {
-    position: 'absolute', bottom: 0, right: 0,
-    backgroundColor: '#000', width: 36, height: 36,
-    borderRadius: 18, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 3, borderColor: '#FFF'
-  },
+/* ---------- Input Component ---------- */
+const InputItem = ({
+  label,
+  isActive,
+  onFocus,
+  onBlur,
+  value, // Nhận giá trị từ state
+  ...props
+}) => (
+  <View style={[styles.inputBox, isActive && styles.active]}>
+    <Text style={[styles.label, isActive && { color: "#007AFF" }]}>
+      {label}
+    </Text>
+    <TextInput
+      {...props}
+      value={value} // Gán giá trị hiển thị cho TextInput
+      style={styles.input}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      selectionColor="#007AFF"
+      placeholderTextColor="#C7C7CC"
+    />
+  </View>
+);
 
-  form: { marginBottom: 30 },
-  inputWrapper: { marginBottom: 20 },
-  inputLabel: { fontSize: 14, fontWeight: '600', color: '#444', marginBottom: 8, marginLeft: 4 },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    paddingHorizontal: 15,
+/* ---------- Styles ---------- */
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#FFF" },
+  center: { justifyContent: "center", alignItems: "center" },
+
+  header: {
     height: 60,
-    // Tạo bóng đổ cho ô nhập liệu nổi lên
-    shadowColor: '#000',
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F2F2F7",
+  },
+  headerTitle: { fontSize: 17, fontWeight: "600", color: "#1D1D1F" },
+  saveBtn: {
+    backgroundColor: "#1D1D1F",
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 10,
+    minWidth: 60,
+    alignItems: 'center'
+  },
+  saveText: { color: "#FFF", fontWeight: "600" },
+
+  content: { padding: 24 },
+
+  avatarSection: { alignItems: "center", marginBottom: 32 },
+  avatar: { width: 110, height: 110, borderRadius: 55, backgroundColor: '#F2F2F7' },
+  camera: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
   },
-  disabledInput: { backgroundColor: '#F8F8F8', elevation: 0, shadowOpacity: 0 },
-  inputIcon: { marginRight: 12 },
-  input: { flex: 1, fontSize: 16, color: '#000', fontWeight: '500' },
+  sub: { marginTop: 10, fontSize: 13, color: "#8E8E93" },
 
-  saveButton: {
-    backgroundColor: '#000',
-    height: 60,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
-    marginBottom: 50
+  inputBox: {
+    backgroundColor: "#F9F9FB",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#F2F2F7",
+    padding: 16,
+    marginBottom: 18,
   },
-  saveButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' }
+  active: {
+    borderColor: "#007AFF",
+    backgroundColor: "#FFF",
+  },
+  label: { fontSize: 12, color: "#8E8E93", marginBottom: 4 },
+  input: { fontSize: 16, fontWeight: "500", color: "#1D1D1F", paddingVertical: 4 },
 });
